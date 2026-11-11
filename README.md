@@ -119,6 +119,8 @@ echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 │   └── res/
 │       ├── values*/strings.xml  # 简体中文 / 繁體中文 / English
 │       └── xml/locales_config.xml
+├── assets/icon/                  # 图标母版 / 1024 图标 / 启动器预览
+├── tools/                        # 图标导出脚本（矢量 → 各密度 PNG）
 ├── .github/workflows/release.yml # 打 tag 自动构建、签名并发布 Release
 ├── screenshots/                  # README 截图
 └── dist/                         # 本地构建的签名包（不入库）
@@ -154,6 +156,7 @@ Android 13+ 可以在「设置 → 应用 → 接力分享 → 语言」里单�
 ## License
 
 [MIT](LICENSE)
+
 
 
 

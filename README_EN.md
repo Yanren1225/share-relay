@@ -119,6 +119,8 @@ echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 │   └── res/
 │       ├── values*/strings.xml  # Simplified Chinese / Traditional Chinese / English
 │       └── xml/locales_config.xml
+├── assets/icon/                  # Icon master, 1024px icon and launcher preview
+├── tools/                        # Icon export script (vectors → legacy PNGs)
 ├── .github/workflows/release.yml # Tag → build, sign and publish a GitHub Release
 ├── screenshots/                  # README images
 └── dist/                         # Locally built signed APKs (git-ignored)
@@ -154,6 +156,7 @@ On Android 13+ you can switch per app in Settings → Apps → ShareRelay → La
 ## License
 
 [MIT](LICENSE)
+
 
 
 
