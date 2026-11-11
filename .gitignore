@@ -1,0 +1,43 @@
+# Gradle
+.gradle/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Local config
+local.properties
+
+# IDE
+.idea/
+*.iml
+*.hprof
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build outputs
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# 本地临时文件
+.tmp/
+*.log
+
+# 签名与发布产物（不要提交）
+keystore.properties
+keystore/
+dist/
+
+# Kotlin 编译缓存
+.kotlin/
+
+# 密钥库（任何位置）
+*.jks
+*.keystore
+
+
+

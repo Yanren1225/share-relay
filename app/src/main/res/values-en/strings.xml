@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ShareRelay</string>
+    <string name="share_target">ShareRelay</string>
+
+    <string name="settings_title">ShareRelay</string>
+    <string name="section_transfer">Transfer</string>
+    <string name="pref_mode_title">Transfer Mode</string>
+
+    <string name="section_panel">Share Sheet</string>
+    <string name="pref_exclude_self_title">Exclude This App</string>
+    <string name="pref_exclude_self_summary">Hide ShareRelay from the system share sheet</string>
+    <string name="pref_exclude_qq_title">Exclude QQ</string>
+    <string name="pref_exclude_qq_summary">Prevent infinite loops caused by sharing back to QQ</string>
+
+    <string name="section_other">Other</string>
+    <string name="pref_keep_log_title">Save Share History</string>
+    <string name="pref_keep_log_summary">Keep up to 200 entries</string>
+    <string name="pref_history_title">Share History</string>
+    <string name="pref_history_summary">View recent relay logs</string>
+    <string name="pref_cleanup_title">Clean Up Copies</string>
+    <string name="pref_cleanup_summary">Copy mode creates temporary copies when sharing</string>
+    <string name="pref_cleanup_summary_count">Cached copies: %1$d</string>
+    <string name="pref_cleanup_summary_leftover">Leftover copies: %1$d</string>
+    <string name="toast_cleaned">Cleaned up %1$d copies</string>
+
+    <string name="section_about">About</string>
+    <string name="pref_version_title">Version</string>
+    <string name="pref_version_summary">%1$s · %2$s</string>
+
+    <string name="banner_degraded_root">Root access denied; switched to pass-through for this share</string>
+    <string name="banner_degraded_auto">Root not detected; Auto mode switched to pass-through</string>
+
+    <string name="mode_auto">Auto</string>
+    <string name="mode_auto_desc">Use Root direct if rooted; otherwise pass through and wait for result</string>
+    <string name="mode_root">Root direct</string>
+    <string name="mode_root_desc">Requires Root: read original files directly without copies or waiting</string>
+    <string name="mode_passthrough">Pass-through</string>
+    <string name="mode_passthrough_desc">Forward directly and wait for the system share sheet to close</string>
+    <string name="mode_copy">Copy</string>
+    <string name="mode_copy_desc">Create a copy before sharing; better compatibility, slower for large files</string>
+
+    <string name="log_title">Share History</string>
+    <string name="action_clear">Clear</string>
+    <string name="log_empty">No history yet. Try sharing something from QQ.</string>
+    <string name="log_from">From %1$s</string>
+
+    <string name="toast_no_content">No shareable content received</string>
+    <string name="toast_busy">A share is already in progress</string>
+    <string name="error_read_failed">Read failed. Please switch to “Copy” in Settings.</string>
+    <string name="error_chooser_failed">Failed to open share sheet: %1$s</string>
+    <string name="error_text_share_failed">Failed to share text: %1$s</string>
+
+    <string name="progress_copying">Copying file…</string>
+    <string name="progress_copying_multi">Copying file %1$d of %2$d…</string>
+    <string name="action_cancel">Cancel</string>
+
+    <string name="chooser_title">Share to…</string>
+
+    <string name="log_mode_text">Text</string>
+    <string name="log_plain_text">Plain text</string>
+    <string name="log_one_file">1 file</string>
+    <string name="log_multi_files">%1$d files</string>
+    <string name="log_detail_mode">Mode=%1$s</string>
+    <string name="log_detail_wait">Waiting for result</string>
+    <string name="log_detail_direct">Direct</string>
+    <string name="log_detail_type">Type=%1$s</string>
+    <string name="log_unnamed">Unnamed</string>
+    <string name="log_failed">Share failed: %1$s</string>
+    <string name="log_uri_count">URI count=%1$d</string>
+</resources>
+
+
+

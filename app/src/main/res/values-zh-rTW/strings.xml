@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">接力分享</string>
+    <string name="share_target">接力分享</string>
+
+    <string name="settings_title">接力分享</string>
+    <string name="section_transfer">傳輸</string>
+    <string name="pref_mode_title">傳輸模式</string>
+
+    <string name="section_panel">分享面板</string>
+    <string name="pref_exclude_self_title">排除本應用程式</string>
+    <string name="pref_exclude_self_summary">不在系統分享面板中顯示「接力分享」</string>
+    <string name="pref_exclude_qq_title">排除 QQ</string>
+    <string name="pref_exclude_qq_summary">避免再次轉傳回 QQ 造成無限迴圈</string>
+
+    <string name="section_other">其他</string>
+    <string name="pref_keep_log_title">儲存分享紀錄</string>
+    <string name="pref_keep_log_summary">最多保留 200 筆</string>
+    <string name="pref_history_title">分享紀錄</string>
+    <string name="pref_history_summary">查看最近的中轉紀錄</string>
+    <string name="pref_cleanup_title">清理副本</string>
+    <string name="pref_cleanup_summary">複製模式會在分享時產生副本</string>
+    <string name="pref_cleanup_summary_count">目前有 %1$d 個副本</string>
+    <string name="pref_cleanup_summary_leftover">上次遺留 %1$d 個副本</string>
+    <string name="toast_cleaned">已清理 %1$d 個副本</string>
+
+    <string name="section_about">關於</string>
+    <string name="pref_version_title">版本</string>
+    <string name="pref_version_summary">%1$s · %2$s</string>
+
+    <string name="banner_degraded_root">未取得 Root 權限，本次改為透傳</string>
+    <string name="banner_degraded_auto">未偵測到 Root，自動模式已改為透傳</string>
+
+    <string name="mode_auto">自動</string>
+    <string name="mode_auto_desc">有 Root 則直讀，否則透傳並等待回執</string>
+    <string name="mode_root">Root 直讀</string>
+    <string name="mode_root_desc">需 Root：直接讀取原始檔案，免副本、免等待回執</string>
+    <string name="mode_passthrough">透傳</string>
+    <string name="mode_passthrough_desc">直接轉傳，需等待系統分享面板關閉</string>
+    <string name="mode_copy">複製</string>
+    <string name="mode_copy_desc">先產生副本再分享，相容性佳但大檔案較慢</string>
+
+    <string name="log_title">分享紀錄</string>
+    <string name="action_clear">清除</string>
+    <string name="log_empty">還沒有紀錄，從 QQ 分享一次試試吧</string>
+    <string name="log_from">來自 %1$s</string>
+
+    <string name="toast_no_content">沒有收到可分享的內容</string>
+    <string name="toast_busy">正在分享中，請稍候</string>
+    <string name="error_read_failed">讀取失敗，請至設定切換為「複製」</string>
+    <string name="error_chooser_failed">喚起分享面板失敗：%1$s</string>
+    <string name="error_text_share_failed">分享文字失敗：%1$s</string>
+
+    <string name="progress_copying">正在複製檔案</string>
+    <string name="progress_copying_multi">正在複製第 %1$d/%2$d 個檔案</string>
+    <string name="action_cancel">取消</string>
+
+    <string name="chooser_title">分享到…</string>
+
+    <string name="log_mode_text">文字</string>
+    <string name="log_plain_text">純文字</string>
+    <string name="log_one_file">1 個檔案</string>
+    <string name="log_multi_files">%1$d 個檔案</string>
+    <string name="log_detail_mode">模式=%1$s</string>
+    <string name="log_detail_wait">等待回執</string>
+    <string name="log_detail_direct">直通</string>
+    <string name="log_detail_type">類型=%1$s</string>
+    <string name="log_unnamed">未命名</string>
+    <string name="log_failed">分享失敗：%1$s</string>
+    <string name="log_uri_count">URI 數量=%1$d</string>
+</resources>
+
+
