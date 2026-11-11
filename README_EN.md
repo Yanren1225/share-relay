@@ -100,7 +100,7 @@ echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 # on Windows use gradlew.bat assembleDebug
 ```
 
-> AGP 8.13.1 officially supports up to API 36; `gradle.properties` sets `android.suppressUnsupportedCompileSdk=37` so the project can compile against 37. The release signing config (`keystore.properties`) and the keystore itself are not committed.
+> AGP 8.13.1 officially supports up to API 36; `gradle.properties` sets `android.suppressUnsupportedCompileSdk=37` so the project can compile against 37. The release signing config (`keystore.properties`) and the keystore itself are not committed. See [docs/RELEASING.md](docs/RELEASING.md) for the full release process (versioning, tags, secrets, troubleshooting).
 
 ## Project structure
 
@@ -155,6 +155,7 @@ On Android 13+ you can switch per app in Settings → Apps → ShareRelay → La
 ## License
 
 [MIT](LICENSE)
+
 
 
 
