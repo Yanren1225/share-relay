@@ -41,16 +41,22 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
+      # 直接使用 runner 预装的 Android SDK（setup-android 在新 runner 上会因 'tools' 包缺失而失败）
       # SDK 37 的包名是 platforms;android-37.0，AGP 需要 platforms/android-37 这个目录名
       - name: Install SDK 37
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager --install "platforms;android-37.0" "build-tools;36.0.0"
-          ln -sfn "$ANDROID_HOME/platforms/android-37.0" "$ANDROID_HOME/platforms/android-37"
-          ls "$ANDROID_HOME/platforms"
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          echo "SDK root: $SDK_ROOT"
+          SDKMGR="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMGR" ]; then
+            SDKMGR=$(find "$SDK_ROOT/cmdline-tools" -name sdkmanager -type f 2>/dev/null | sort | tail -1)
+            chmod +x "$SDKMGR"
+          fi
+          echo "sdkmanager: $SDKMGR"
+          yes | "$SDKMGR" --licenses > /dev/null 2>&1 || true
+          "$SDKMGR" --install "platforms;android-37.0" "build-tools;36.0.0"
+          ln -sfn "$SDK_ROOT/platforms/android-37.0" "$SDK_ROOT/platforms/android-37"
+          ls "$SDK_ROOT/platforms"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -93,3 +99,4 @@ jobs:
           gh release create "$GITHUB_REF_NAME" "out/$APK_NAME" \
             --title "ShareRelay $VERSION" \
             --generate-notes
+
