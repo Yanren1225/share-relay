@@ -6,7 +6,7 @@
 #      git add -A && git commit -m "feat: xxx" && git push origin main
 #      git tag v0.2.0 && git push origin v0.2.0
 #    推送 tag 后本 workflow 自动：装 JDK 17 / SDK 37 → 恢复 keystore → assembleRelease
-#    → apksigner 验签 → gh release create --generate-notes。
+#    → apksigner 验签 → 按 commit 前缀（feat/fix/其他）生成分类 notes → gh release create。
 # 3. 仓库 Secrets（Settings → Secrets and variables → Actions）：
 #      ANDROID_KEYSTORE_BASE64 / KEYSTORE_PASSWORD / KEY_ALIAS / KEY_PASSWORD
 #    keystore 为 keystore/release.jks（本地不入库），base64 生成：
@@ -113,13 +113,41 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk "out/$APK_NAME"
           ls -lh "out/$APK_NAME"
 
+      - name: Generate release notes
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)
+          if [ -n "$PREV_TAG" ]; then
+            RANGE="${PREV_TAG}..${GITHUB_REF_NAME}"
+            COMPARE_LINE="**Full Changelog**: https://github.com/${GITHUB_REPOSITORY}/compare/${PREV_TAG}...${GITHUB_REF_NAME}"
+          else
+            RANGE="${GITHUB_REF_NAME}"
+            COMPARE_LINE=""
+          fi
+          COMMITS=$(git log "$RANGE" --no-merges --pretty=format:'%s')
+          strip() { sed -E 's/^[a-zA-Z]+(\([^)]*\))?!?: *//' | sed 's/^/- /'; }
+          FEAT=$(printf '%s\n' "$COMMITS" | grep -E '^(feat|feature)(\([^)]*\))?!?:' | strip || true)
+          FIX=$(printf '%s\n' "$COMMITS" | grep -E '^fix(\([^)]*\))?!?:' | strip || true)
+          OTHER=$(printf '%s\n' "$COMMITS" | grep -Ev '^(feat|feature|fix)(\([^)]*\))?!?:' | grep -v '^$' | strip || true)
+          {
+            echo "## 更新内容"
+            if [ -n "$FEAT" ]; then echo; echo "### 新功能"; echo "$FEAT"; fi
+            if [ -n "$FIX" ]; then echo; echo "### 修复"; echo "$FIX"; fi
+            if [ -n "$OTHER" ]; then echo; echo "### 其他"; echo "$OTHER"; fi
+            if [ -n "$COMPARE_LINE" ]; then echo; echo "$COMPARE_LINE"; fi
+          } > notes.md
+          echo '--- release notes ---'
+          cat notes.md
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create "$GITHUB_REF_NAME" "out/$APK_NAME" \
             --title "ShareRelay $VERSION" \
-            --generate-notes
+            --notes-file notes.md
+
+
+
 
 
 
