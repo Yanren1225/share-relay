@@ -11,7 +11,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" />
   <img src="https://img.shields.io/badge/Platform-Android%207.0%2B-3DDC84.svg" alt="Platform: Android 7.0+" />
-  <img src="https://img.shields.io/badge/Version-0.1.0-orange.svg" alt="Version: 0.1.0" />
+  <img src="https://img.shields.io/badge/Version-0.1.1-orange.svg" alt="Version: 0.1.1" />
   <img src="https://img.shields.io/badge/Network-No%20permission-brightgreen.svg" alt="No network permission" />
 </p>
 
@@ -78,7 +78,7 @@ QQ / 微信的分享面板
 也可以用 ADB：
 
 ```bash
-adb install -r ShareRelay-0.1.0.apk
+adb install -r ShareRelay-0.1.1.apk
 ```
 
 > 正式版和调试版签名不同：如果之前装过 debug 包，需要先 `adb uninstall ren.imyan.sharerelay` 再安装正式版。
@@ -156,6 +156,7 @@ Android 13+ 可以在「设置 → 应用 → 接力分享 → 语言」里单�
 ## License
 
 [MIT](LICENSE)
+
 
 
 

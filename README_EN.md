@@ -11,7 +11,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" />
   <img src="https://img.shields.io/badge/Platform-Android%207.0%2B-3DDC84.svg" alt="Platform: Android 7.0+" />
-  <img src="https://img.shields.io/badge/Version-0.1.0-orange.svg" alt="Version: 0.1.0" />
+  <img src="https://img.shields.io/badge/Version-0.1.1-orange.svg" alt="Version: 0.1.1" />
   <img src="https://img.shields.io/badge/Network-No%20permission-brightgreen.svg" alt="No network permission" />
 </p>
 
@@ -78,7 +78,7 @@ If there is no Release yet, build it yourself with the steps below.
 Or install with ADB:
 
 ```bash
-adb install -r ShareRelay-0.1.0.apk
+adb install -r ShareRelay-0.1.1.apk
 ```
 
 > Release and debug builds are signed with different keys. If you previously installed a debug build, run `adb uninstall ren.imyan.sharerelay` first.
@@ -156,6 +156,7 @@ On Android 13+ you can switch per app in Settings → Apps → ShareRelay → La
 ## License
 
 [MIT](LICENSE)
+
 
 
 
