@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/screenshots/ic_launcher.png" width="96" alt="ShareRelay" />
+  <img src="screenshots/ic_launcher.png" width="96" alt="ShareRelay" />
 </p>
 
 <h1 align="center">接力分享 ShareRelay</h1>
@@ -19,7 +19,7 @@
 > **接力分享**把自己注册成系统分享目标：你在 QQ 里选「接力分享」，它再把内容交给 Android 系统分享面板，于是所有声明了对应入口的应用都出现了。
 
 <p align="center">
-  <img src="docs/screenshots/settings.png" width="300" alt="设置页" />
+  <img src="screenshots/settings.png" width="300" alt="设置页" />
 </p>
 
 ## 功能
@@ -34,8 +34,8 @@
 - **干净**：不申请网络权限，无统计 SDK，数据不出本机
 
 <p align="center">
-  <img src="docs/screenshots/progress.png" width="280" alt="复制进度" />&nbsp;&nbsp;
-  <img src="docs/screenshots/history.png" width="280" alt="分享记录" />
+  <img src="screenshots/progress.png" width="280" alt="复制进度" />&nbsp;&nbsp;
+  <img src="screenshots/history.png" width="280" alt="分享记录" />
 </p>
 
 ## 工作原理
@@ -119,10 +119,9 @@ echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 │   └── res/
 │       ├── values*/strings.xml  # 简体中文 / 繁體中文 / English
 │       └── xml/locales_config.xml
-├── docs/
-│   ├── copy-review.md           # 文案审核记录
-│   └── screenshots/             # README 截图
-└── dist/                        # 已签名的发布包
+├── .github/workflows/release.yml # 打 tag 自动构建、签名并发布 Release
+├── screenshots/                  # README 截图
+└── dist/                         # 本地构建的签名包（不入库）
 ```
 
 ## 多语言
@@ -136,8 +135,8 @@ echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 Android 13+ 可以在「设置 → 应用 → 接力分享 → 语言」里单独切换（通过 `res/xml/locales_config.xml` 声明）。
 
 <p align="center">
-  <img src="docs/screenshots/settings-zh-tw.png" width="260" alt="繁體中文" />
-  <img src="docs/screenshots/settings-en.png" width="260" alt="English" />
+  <img src="screenshots/settings-zh-tw.png" width="260" alt="繁體中文" />
+  <img src="screenshots/settings-en.png" width="260" alt="English" />
 </p>
 
 ## 已知限制
@@ -155,6 +154,7 @@ Android 13+ 可以在「设置 → 应用 → 接力分享 → 语言」里单�
 ## License
 
 [MIT](LICENSE)
+
 
 
 

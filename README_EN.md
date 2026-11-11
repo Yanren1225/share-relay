@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/screenshots/ic_launcher.png" width="96" alt="ShareRelay" />
+  <img src="screenshots/ic_launcher.png" width="96" alt="ShareRelay" />
 </p>
 
 <h1 align="center">ShareRelay</h1>
@@ -19,7 +19,7 @@
 > **ShareRelay** registers itself as a system share target: pick it in QQ's panel and it hands the content over to the Android share sheet, where every app that declares a matching share intent shows up.
 
 <p align="center">
-  <img src="docs/screenshots/settings-en.png" width="300" alt="Settings" />
+  <img src="screenshots/settings-en.png" width="300" alt="Settings" />
 </p>
 
 ## Features
@@ -34,8 +34,8 @@
 - **Clean**: no network permission, no analytics, nothing leaves the device
 
 <p align="center">
-  <img src="docs/screenshots/progress.png" width="280" alt="Copy progress" />&nbsp;&nbsp;
-  <img src="docs/screenshots/history.png" width="280" alt="Share history" />
+  <img src="screenshots/progress.png" width="280" alt="Copy progress" />&nbsp;&nbsp;
+  <img src="screenshots/history.png" width="280" alt="Share history" />
 </p>
 
 ## How it works
@@ -100,7 +100,7 @@ echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 # on Windows use gradlew.bat assembleDebug
 ```
 
-> AGP 8.13.1 officially supports up to API 36; `gradle.properties` sets `android.suppressUnsupportedCompileSdk=37` so the project can compile against 37. The release signing config (`keystore.properties`) and the keystore itself are not committed. See [docs/RELEASING.md](docs/RELEASING.md) for the full release process (versioning, tags, secrets, troubleshooting).
+> AGP 8.13.1 officially supports up to API 36; `gradle.properties` sets `android.suppressUnsupportedCompileSdk=37` so the project can compile against 37. The release signing config (`keystore.properties`) and the keystore itself are not committed.
 
 ## Project structure
 
@@ -119,10 +119,9 @@ echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 │   └── res/
 │       ├── values*/strings.xml  # Simplified Chinese / Traditional Chinese / English
 │       └── xml/locales_config.xml
-├── docs/
-│   ├── copy-review.md           # Copy review notes
-│   └── screenshots/             # README images
-└── dist/                        # Signed release APKs
+├── .github/workflows/release.yml # Tag → build, sign and publish a GitHub Release
+├── screenshots/                  # README images
+└── dist/                         # Locally built signed APKs (git-ignored)
 ```
 
 ## Languages
@@ -136,8 +135,8 @@ echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 On Android 13+ you can switch per app in Settings → Apps → ShareRelay → Language (declared via `res/xml/locales_config.xml`).
 
 <p align="center">
-  <img src="docs/screenshots/settings.png" width="260" alt="简体中文" />
-  <img src="docs/screenshots/settings-zh-tw.png" width="260" alt="繁體中文" />
+  <img src="screenshots/settings.png" width="260" alt="简体中文" />
+  <img src="screenshots/settings-zh-tw.png" width="260" alt="繁體中文" />
 </p>
 
 ## Known limitations
@@ -155,6 +154,7 @@ On Android 13+ you can switch per app in Settings → Apps → ShareRelay → La
 ## License
 
 [MIT](LICENSE)
+
 
 
 

@@ -1,3 +1,24 @@
+# 发布流程（打 tag 自动发版）
+# -----------------------------------------------------------------------------
+# 1. 版本号规则：tag vMAJOR.MINOR.PATCH → versionName=MAJOR.MINOR.PATCH，
+#    versionCode=MAJOR*10000+MINOR*100+PATCH（v0.2.0 → 200）；tag 格式不对会直接失败。
+# 2. 日常发版：
+#      git add -A && git commit -m "feat: xxx" && git push origin main
+#      git tag v0.2.0 && git push origin v0.2.0
+#    推送 tag 后本 workflow 自动：装 JDK 17 / SDK 37 → 恢复 keystore → assembleRelease
+#    → apksigner 验签 → gh release create --generate-notes。
+# 3. 仓库 Secrets（Settings → Secrets and variables → Actions）：
+#      ANDROID_KEYSTORE_BASE64 / KEYSTORE_PASSWORD / KEY_ALIAS / KEY_PASSWORD
+#    keystore 为 keystore/release.jks（本地不入库），base64 生成：
+#      [Convert]::ToBase64String([IO.File]::ReadAllBytes('keystore/release.jks'))
+# 4. 本地兜底发版：./gradlew assembleRelease -PversionName=x.y.z -PversionCode=xxxx，
+#    apksigner verify 后 gh release create 手动上传。
+# 5. 重发：gh release delete vX.Y.Z --yes；git tag -d vX.Y.Z；
+#    git push origin :refs/tags/vX.Y.Z；修正后重新打 tag 推送。
+# 6. 坑：不要用 android-actions/setup-android（新 runner 报 Failed to find package 'tools'），
+#    改用预装 SDK + sdkmanager 安装 platforms;android-37.0 与 build-tools;36.0.0，
+#    并软链 platforms/android-37 → android-37.0，否则 AGP 找不到 SDK 37。
+# -----------------------------------------------------------------------------
 name: Release
 
 on:
@@ -99,5 +120,6 @@ jobs:
           gh release create "$GITHUB_REF_NAME" "out/$APK_NAME" \
             --title "ShareRelay $VERSION" \
             --generate-notes
+
 
 
