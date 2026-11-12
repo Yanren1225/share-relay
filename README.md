@@ -50,7 +50,7 @@ QQ / 微信的分享面板
 
 几个关键点：
 
-1. **QQ 的面板是自绘的**：它自己调 `queryIntentActivities()`，再按白名单裁剪；而系统分享面板会列出所有声明了对应 `intent-filter` 的应用。接力分享只是把这一步"还"给系统。
+1. **QQ 的面板是自绘的**：它自己调 `queryIntentActivities()`，再按白名单裁剪；而系统分享面板会列出所有声明了对应 `intent-filter` 的应用。接力分享只是把这一步「还」给系统。
 2. **必须设置 ClipData**：`Intent.createChooser` 只搬运 `ClipData` 里的 URI 授权，不会处理 `EXTRA_STREAM`。所以 `EXTRA_STREAM`、`clipData`、`FLAG_GRANT_READ_URI_PERMISSION` 三者要同时设置，否则目标应用会抛 `SecurityException` 或者读到 0 字节。
 3. **透传必须等回执**：来源应用给我们的 `content://` 是临时授权，绑定在接收方 Activity 的生命周期上。调起分享面板后立刻 `finish()`，授权就会被回收，目标应用只能读到空文件。所以透传模式会保持页面存活，等分享面板关闭后再退出。
 4. **Root 直读**：用 `su` 直读来源文件，再经由自带的 `RelayProvider` 供数，零拷贝、不需要等回执。
@@ -61,7 +61,7 @@ QQ / 微信的分享面板
 | 模式 | 行为 | 需要 Root | 等待回执 |
 | --- | --- | --- | --- |
 | **自动**（默认） | 有 Root 时直读，否则透传 | 否 | 视情况 |
-| **Root 直读** | `su` 读原文件 → 自带 Provider 供数 → 立即结束 | 是 | 否 |
+| **Root 直读** | `su` 读原文件 → 自带 Provider 供数 → 立即结束（非 FileProvider 来源自动转复制） | 是 | 否 |
 | **透传** | 原样转发来源 URI，保持页面直到面板关闭 | 否 | 是 |
 | **复制** | 先复制到私有目录再分享，兼容性更好但大文件较慢 | 否 | 否 |
 
@@ -69,7 +69,7 @@ QQ / 微信的分享面板
 
 ## 安装
 
-1. 从 [Releases](../../releases) 下载最新的 `ShareRelay-*.apk`；
+1. 从 [Releases](https://github.com/Yanren1225/share-relay/releases) 下载最新的 `ShareRelay-*.apk`；
 2. 安装后打开应用，确认传输模式（默认「自动」即可）；
 3. 在 QQ / 微信 / 相册里长按文件 → 分享 → 找到「接力分享」。
 
@@ -92,7 +92,7 @@ adb install -r ShareRelay-0.1.1.apk
 - **Gradle** 8.13（仓库自带 wrapper）
 
 ```bash
-git clone <repo-url> ShareRelay
+git clone https://github.com/Yanren1225/share-relay.git ShareRelay
 cd ShareRelay
 echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 ./gradlew assembleDebug
@@ -119,10 +119,9 @@ echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 │   └── res/
 │       ├── values*/strings.xml  # 简体中文 / 繁體中文 / English
 │       └── xml/locales_config.xml
-
 ├── .github/workflows/release.yml # 打 tag 自动构建、签名并发布 Release
 ├── screenshots/                  # README 截图
-└── dist/                         # 本地构建的签名包（不入库）
+└── dist/                         # 本地构建产物（不入库，clone 后不存在）
 ```
 
 ## 多语言
@@ -136,7 +135,7 @@ echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 Android 13+ 可以在「设置 → 应用 → 接力分享 → 语言」里单独切换（通过 `res/xml/locales_config.xml` 声明）。
 
 <p align="center">
-  <img src="screenshots/settings-zh-tw.png" width="260" alt="繁體中文" />
+  <img src="screenshots/settings-zh-tw.png" width="260" alt="繁體中文" />&nbsp;&nbsp;
   <img src="screenshots/settings-en.png" width="260" alt="English" />
 </p>
 
@@ -155,6 +154,8 @@ Android 13+ 可以在「设置 → 应用 → 接力分享 → 语言」里单�
 ## License
 
 [MIT](LICENSE)
+
+
 
 
 

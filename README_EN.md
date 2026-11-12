@@ -52,16 +52,16 @@ A few notes from building it:
 
 1. **QQ's share panel is custom-built.** It calls `queryIntentActivities()` and filters the result with its own whitelist. The system share sheet lists every app that declares the matching `intent-filter`; ShareRelay simply hands the decision back to the system.
 2. **ClipData is mandatory.** `Intent.createChooser` only propagates URI grants carried in `ClipData`; it does not look at `EXTRA_STREAM`. Set `EXTRA_STREAM`, `clipData` and `FLAG_GRANT_READ_URI_PERMISSION` together, or the target app gets a `SecurityException` or an empty file.
-3. **Pass-through must wait for the result.** The source app grants our activity a temporary `content://` permission tied to its lifetime. Calling `finish()` right after launching the sheet revokes the grant and the target reads 0 bytes, so pass-through keeps the activity alive until the sheet closes.
-4. **Root direct** reads the original file with `su` and serves it through our own `RelayProvider` — zero copy, no waiting for a result.
+3. **Pass-through must wait for the share sheet to close.** The source app grants our activity a temporary `content://` permission tied to its lifetime. Calling `finish()` right after launching the sheet revokes the grant and the target reads 0 bytes, so pass-through keeps the activity alive until the sheet closes.
+4. **Root direct** reads the original file with `su` and serves it through our own `RelayProvider` — zero copy, no waiting for the sheet to close.
 5. **`file://` fallback.** Since Android 7.0 a `file://` URI cannot be exposed across apps (`FileUriExposedException`), so such sources are copied first.
 
 ## Transfer modes
 
-| Mode | Behaviour | Needs Root | Waits for result |
+| Mode | Behavior | Needs Root | Waits for sheet |
 | --- | --- | --- | --- |
 | **Auto** (default) | Root direct when available, otherwise pass-through | No | Depends |
-| **Root direct** | `su` reads the file → served by our provider → finish immediately | Yes | No |
+| **Root direct** | `su` reads the file → served by our provider → finish immediately (non-FileProvider sources fall back to copy) | Yes | No |
 | **Pass-through** | Forward the source URI as-is, keep the activity alive until the sheet closes | No | Yes |
 | **Copy** | Copy into private storage first, then share — most reliable, slower for large files | No | No |
 
@@ -69,7 +69,7 @@ If Root is not granted, selecting **Root direct** or **Auto** shows a warning ba
 
 ## Install
 
-1. Download the latest `ShareRelay-*.apk` from [Releases](../../releases);
+1. Download the latest `ShareRelay-*.apk` from [Releases](https://github.com/Yanren1225/share-relay/releases);
 2. Open the app and keep the default transfer mode (Auto);
 3. Long-press a file in QQ / WeChat / Gallery → Share → pick ShareRelay.
 
@@ -92,7 +92,7 @@ Requirements:
 - **Gradle** 8.13 (wrapper included)
 
 ```bash
-git clone <repo-url> ShareRelay
+git clone https://github.com/Yanren1225/share-relay.git ShareRelay
 cd ShareRelay
 echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 ./gradlew assembleDebug
@@ -119,10 +119,9 @@ echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 │   └── res/
 │       ├── values*/strings.xml  # Simplified Chinese / Traditional Chinese / English
 │       └── xml/locales_config.xml
-
 ├── .github/workflows/release.yml # Tag → build, sign and publish a GitHub Release
 ├── screenshots/                  # README images
-└── dist/                         # Locally built signed APKs (git-ignored)
+└── dist/                         # Locally built signed APKs (git-ignored, absent after clone)
 ```
 
 ## Languages
@@ -136,8 +135,8 @@ echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 On Android 13+ you can switch per app in Settings → Apps → ShareRelay → Language (declared via `res/xml/locales_config.xml`).
 
 <p align="center">
-  <img src="screenshots/settings.png" width="260" alt="简体中文" />
-  <img src="screenshots/settings-zh-tw.png" width="260" alt="繁體中文" />
+  <img src="screenshots/settings.png" width="260" alt="Simplified Chinese" />&nbsp;&nbsp;
+  <img src="screenshots/settings-zh-tw.png" width="260" alt="Traditional Chinese" />
 </p>
 
 ## Known limitations
@@ -145,7 +144,7 @@ On Android 13+ you can switch per app in Settings → Apps → ShareRelay → La
 - **Root direct** needs Root granted in Magisk / KernelSU / APatch. Without it the app degrades automatically.
 - Source URIs that are not `FileProvider` URIs (e.g. Gallery `MediaStore` URIs) can't be mapped to a real path by `RootHelper`, so the app falls back to copying.
 - Copying GB-sized files is limited by storage speed; the progress card can be cancelled.
-- The system share sheet is provided by the system/ROM. Some heavily customised ROMs may still show only favourite apps — the app can't override that.
+- The system share sheet is provided by the system/ROM. Some heavily customized ROMs may still show only favorite apps — the app can't override that.
 
 ## Credits
 
@@ -155,6 +154,8 @@ On Android 13+ you can switch per app in Settings → Apps → ShareRelay → La
 ## License
 
 [MIT](LICENSE)
+
+
 
 
 
