@@ -100,7 +100,7 @@ echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 # on Windows use gradlew.bat assembleDebug
 ```
 
-> AGP 8.13.1 officially supports up to API 36; `gradle.properties` sets `android.suppressUnsupportedCompileSdk=37` so the project can compile against 37. The release signing config (`keystore.properties`) and the keystore itself are not committed.
+> AGP 8.13.1 officially supports up to API 36; `gradle.properties` sets `android.suppressUnsupportedCompileSdk=37` so the project can compile against 37.
 
 ## Project structure
 
@@ -119,8 +119,7 @@ echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 │   └── res/
 │       ├── values*/strings.xml  # Simplified Chinese / Traditional Chinese / English
 │       └── xml/locales_config.xml
-├── assets/icon/                  # Icon master, 1024px icon and launcher preview
-├── tools/                        # Icon export script (vectors → legacy PNGs)
+
 ├── .github/workflows/release.yml # Tag → build, sign and publish a GitHub Release
 ├── screenshots/                  # README images
 └── dist/                         # Locally built signed APKs (git-ignored)
@@ -156,6 +155,7 @@ On Android 13+ you can switch per app in Settings → Apps → ShareRelay → La
 ## License
 
 [MIT](LICENSE)
+
 
 
 
