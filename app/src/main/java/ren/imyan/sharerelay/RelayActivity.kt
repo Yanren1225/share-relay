@@ -37,6 +37,7 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.darkColorScheme
 import top.yukonga.miuix.kmp.theme.lightColorScheme
+import android.os.ParcelFileDescriptor
 import java.io.File
 import java.io.FileOutputStream
 /**
@@ -50,6 +51,9 @@ class RelayActivity : ComponentActivity() {
     companion object {
         private const val TAG = "ShareRelay"
         private const val REQ_SHARE = 1001
+
+        /** 同一个来源 URI 预先打开的 fd 数量：覆盖分享面板预览 / 目标读取 / 二次打开。 */
+        private const val FD_COPIES = 4
     }
 
     private var busy = false
@@ -117,9 +121,10 @@ class RelayActivity : ComponentActivity() {
         try {
             when (mode) {
                 TransferMode.ROOT -> {
-                    items = rootItems(payload)
+                    // 优先交给目标 App 一个真实文件 fd（可 seek、缩略图正常），拿不到才用 su 管道
+                    items = fdItems(payload) ?: rootItems(payload)
                     if (items == null) {
-                        Log.i(TAG, "root 直读失败，回落到复制")
+                        Log.i(TAG, "root 取数失败，回落到复制")
                         realMode = TransferMode.COPY
                         items = copyItems(payload)
                     }
@@ -130,8 +135,20 @@ class RelayActivity : ComponentActivity() {
                         realMode = TransferMode.COPY
                         items = copyItems(payload)
                     } else {
-                        items = passthroughItems(payload)
-                        waitResult = true
+                        // 先尝试把来源文件 fd 直接交给目标（零拷贝 + 可 seek + 能补文件名），
+                        // 对方 Provider 不支持时才退回原样透传 / 复制。
+                        items = fdItems(payload)
+                        if (items == null) {
+                            val passthrough = passthroughItems(payload)
+                            if (passthrough == null) {
+                                Log.i(TAG, "来源文件名缺少扩展名，透传改为复制")
+                                realMode = TransferMode.COPY
+                                items = copyItems(payload)
+                            } else {
+                                items = passthrough
+                                waitResult = true
+                            }
+                        }
                     }
                 }
                 else -> items = copyItems(payload)
@@ -174,26 +191,86 @@ class RelayActivity : ComponentActivity() {
 
     // ------------------------------------------------------------ 三种取数策略
 
+    /**
+     * 趁来源授权有效，用 openFileDescriptor 拿到真实文件 fd，交给目标 App 的是可 seek 的真实文件：
+     *  - 不用复制到磁盘，也不用 su 管道；
+     *  - 文件名 / MIME 由我们的 Provider 补齐（QQ 那种无扩展名也能变成 .jpg）；
+     *  - fd 已打开，目标晚一点读也不依赖 Activity 是否还活着。
+     * 对方 Provider 不给 fd（或给的是不可 seek 的管道）时返回 null，走原有回退逻辑。
+     */
+    private fun fdItems(payload: SharePayload): List<Forwarder.Item>? {
+        val out = ArrayList<Forwarder.Item>(payload.uris.size)
+        for (u in payload.uris) {
+            if (u.scheme == "file") return null
+            val first = try {
+                contentResolver.openFileDescriptor(u, "r")
+            } catch (t: Throwable) {
+                Log.i(TAG, "openFileDescriptor failed for $u: $t")
+                null
+            } ?: return null
+            val seekable = try {
+                android.system.Os.lseek(first.fileDescriptor, 0, android.system.OsConstants.SEEK_CUR)
+                true
+            } catch (t: Throwable) {
+                false
+            }
+            if (!seekable) {
+                Log.i(TAG, "来源 fd 不可 seek，放弃 fd 路径")
+                runCatching { first.close() }
+                return null
+            }
+            val raw = displayName(u)
+            var mime = resolveMime(u, raw, payload.type)
+            if (isGenericMime(mime)) mime = sniffMime(u) ?: mime
+            val name = nameWithExtension(raw, mime, u.lastPathSegment ?: "share")
+            val size = first.statSize.takeIf { it > 0 } ?: displaySize(u)
+            val pfds = ArrayList<ParcelFileDescriptor>(FD_COPIES)
+            pfds += first
+            repeat(FD_COPIES - 1) {
+                runCatching { contentResolver.openFileDescriptor(u, "r") }.getOrNull()?.let { pfds += it }
+            }
+            val token = FdVfs.register(pfds, name, size, mime)
+            Log.i(TAG, "fd item name=$name mime=$mime size=$size fds=${pfds.size}")
+            out += Forwarder.Item(RelayProvider.uriForFd(token), mime, name, size)
+        }
+        return out
+    }
+
     private fun rootItems(payload: SharePayload): List<Forwarder.Item>? {
         val out = ArrayList<Forwarder.Item>(payload.uris.size)
         for (u in payload.uris) {
             val path = PathResolver.resolve(this, u) ?: return null
             val size = RootHelper.statSize(path)
             if (size < 0) return null
-            val name = displayName(u) ?: File(path).name
-            val mime = safeMime(u) ?: mimeFromName(name)
+            val raw = displayName(u) ?: File(path).name
+            var mime = resolveMime(u, raw, payload.type)
+            // QQ 等 Provider 常报 image/* 或 octet-stream；root 模式也读文件头拿真实类型，
+            // 否则目标 App 拿到的还是无后缀文件名 + 问号预览
+            if (isGenericMime(mime)) mime = sniffMime(u) ?: mime
+            val name = nameWithExtension(raw, mime, "file")
             val token = RootVfs.register(path, name, size, mime)
             out += Forwarder.Item(RelayProvider.uriForRoot(token), mime, name, size)
         }
         return out
     }
 
+    /**
+     * 透传：原样转发来源 URI。
+     * 但第三方 Provider 的 DISPLAY_NAME 没法改写，如果它只给了一个没有扩展名的名字
+     * （QQ 的 FileProvider 就经常这样，例如 "0"），目标 App 会按这个名字保存，
+     * 最终得到一个没有后缀的文件。这种情况下宁可变慢：返回 null，让调用方回落到复制。
+     */
     private fun passthroughItems(payload: SharePayload): List<Forwarder.Item>? {
         val out = ArrayList<Forwarder.Item>(payload.uris.size)
         for (u in payload.uris) {
-            val name = displayName(u)
-            val mime = safeMime(u) ?: mimeFromName(name ?: u.lastPathSegment ?: "")
-            out += Forwarder.Item(u, mime, name, displaySize(u))
+            val raw = displayName(u)
+            if (!hasUsableExtension(raw)) {
+                Log.i(TAG, "来源文件名缺少扩展名（${raw ?: "null"}），透传改为复制")
+                return null
+            }
+            var mime = resolveMime(u, raw ?: u.lastPathSegment, payload.type)
+            if (isGenericMime(mime)) mime = sniffMime(u) ?: mime
+            out += Forwarder.Item(u, mime, nameWithExtension(raw, mime, "file"), displaySize(u))
         }
         return out
     }
@@ -211,7 +288,11 @@ class RelayActivity : ComponentActivity() {
         payload.uris.forEachIndexed { idx, u ->
             if (cancelled) return null
             val raw = displayName(u) ?: "share_$idx"
-            val dest = File(dir, "${System.currentTimeMillis()}-$idx-${sanitize(raw)}")
+            var mime = resolveMime(u, raw, payload.type)
+            var name = nameWithExtension(raw, mime, "share_$idx")
+            var dest = File(dir, "${System.currentTimeMillis()}-$idx-${sanitize(name)}")
+            val head = ByteArray(64)
+            var headLen = 0
             try {
                 val input = contentResolver.openInputStream(u)
                 if (input == null) return null
@@ -226,12 +307,16 @@ class RelayActivity : ComponentActivity() {
                             }
                             val read = ins.read(buf)
                             if (read <= 0) break
+                            if (headLen == 0) {
+                                headLen = minOf(read, head.size)
+                                System.arraycopy(buf, 0, head, 0, headLen)
+                            }
                             outs.write(buf, 0, read)
                             doneBytes += read
                             val now = System.currentTimeMillis()
                             if (now - lastTick >= 120) {
                                 lastTick = now
-                                updateProgress(idx, payload.uris.size, raw, doneBytes, total)
+                                updateProgress(idx, payload.uris.size, name, doneBytes, total)
                             }
                         }
                     }
@@ -241,9 +326,15 @@ class RelayActivity : ComponentActivity() {
                 runCatching { dest.delete() }
                 return null
             }
-            updateProgress(idx, payload.uris.size, raw, doneBytes, total)
-            val mime = safeMime(u) ?: mimeFromName(dest.name)
-            out += Forwarder.Item(RelayProvider.uriForShared(dest), mime, raw, dest.length())
+            // Provider 的 MIME 经常是 application/octet-stream 或 image/*，用文件头兜底推断真实类型
+            if (isGenericMime(mime)) mime = sniffMime(head, headLen) ?: mime
+            val finalName = nameWithExtension(raw, mime, "share_$idx")
+            if (finalName != name) {
+                val renamed = File(dir, "${System.currentTimeMillis()}-$idx-${sanitize(finalName)}")
+                if (dest.renameTo(renamed)) { dest = renamed; name = finalName }
+            }
+            updateProgress(idx, payload.uris.size, name, doneBytes, total)
+            out += Forwarder.Item(RelayProvider.uriForShared(dest), mime ?: mimeFromName(dest.name), name, dest.length())
         }
         hideProgress()
         return out
@@ -382,6 +473,64 @@ class RelayActivity : ComponentActivity() {
         -1L
     }
 
+    /** 文件名是否已经带了一个可被系统识别的扩展名（1~5 位字母数字）。 */
+    private fun hasUsableExtension(name: String?): Boolean {
+        if (name.isNullOrBlank()) return false
+        val ext = name.substringAfterLast('.', "").lowercase()
+        if (ext.isEmpty() || ext.length > 5 || !ext.all { it.isLetterOrDigit() }) return false
+        return MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) != null
+    }
+
+    /** 目标 App 会把 DISPLAY_NAME 当作保存文件名；缺扩展名时按 MIME 补一个。 */
+    private fun nameWithExtension(name: String?, mime: String?, fallback: String): String {
+        val base = (name ?: fallback).trim().ifEmpty { fallback }
+        if (hasUsableExtension(base)) return base
+        val ext = mime?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: return base
+        return "$base.$ext"
+    }
+
+    /** Provider 常把通用类型报成 application/octet-stream，这时用文件名/Intent 类型兜底。 */
+    private fun resolveMime(u: Uri, raw: String?, fallback: String?): String? {
+        val typed = safeMime(u)?.lowercase()
+        if (!isGenericMime(typed)) return typed
+        return mimeFromName(raw ?: "") ?: fallback ?: typed
+    }
+
+    private fun isGenericMime(mime: String?): Boolean =
+        mime.isNullOrBlank() || mime == "*/*" || mime == "application/octet-stream" || mime.endsWith("/*")
+
+    /** 读来源文件前 64 字节，用文件头判断真实 MIME（QQ 的 Provider 经常只报 image/ 通配类型）。 */
+    private fun sniffMime(u: Uri): String? = try {
+        contentResolver.openInputStream(u)?.use { ins ->
+            val head = ByteArray(64)
+            val n = ins.read(head)
+            if (n > 0) sniffMime(head, n) else null
+        }
+    } catch (t: Throwable) {
+        null
+    }
+
+    private fun sniffMime(head: ByteArray, len: Int): String? {
+        if (len < 4) return null
+        fun ascii(off: Int, size: Int) = String(head, off, size, Charsets.US_ASCII)
+        if (head[0] == 0xFF.toByte() && head[1] == 0xD8.toByte() && head[2] == 0xFF.toByte()) return "image/jpeg"
+        if (head[0] == 0x89.toByte() && head[1] == 0x50.toByte() && head[2] == 0x4E.toByte() && head[3] == 0x47.toByte()) return "image/png"
+        if (len >= 6 && (ascii(0, 6) == "GIF87a" || ascii(0, 6) == "GIF89a")) return "image/gif"
+        if (len >= 12 && ascii(0, 4) == "RIFF" && ascii(8, 4) == "WEBP") return "image/webp"
+        if (len >= 12 && ascii(4, 4) == "ftyp") {
+            return when (ascii(8, 4).trim()) {
+                "heic", "heix", "hevc", "hevx", "mif1", "msf1" -> "image/heic"
+                "avif", "avis" -> "image/avif"
+                "qt" -> "video/quicktime"
+                "mp41", "mp42", "isom", "iso2", "avc1", "M4V", "dash" -> "video/mp4"
+                else -> null
+            }
+        }
+        if (len >= 4 && ascii(0, 4) == "%PDF") return "application/pdf"
+        if (len >= 4 && head[0] == 0x50.toByte() && head[1] == 0x4B.toByte()) return "application/zip"
+        return null
+    }
+
     private fun mimeFromName(name: String): String? {
         val ext = name.substringAfterLast('.', "").lowercase()
         if (ext.isEmpty()) return null
@@ -447,6 +596,11 @@ class RelayActivity : ComponentActivity() {
         else -> String.format("%.2f GB", bytes / 1024.0 / 1024 / 1024)
     }
 }
+
+
+
+
+
 
 
 

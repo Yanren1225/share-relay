@@ -26,10 +26,10 @@ android {
         // CI 发版时由 release.yml 通过 -PversionName / -PversionCode 注入（也可以走同名环境变量）
         versionCode = (findProperty("versionCode") as String?)?.toIntOrNull()
             ?: System.getenv("VERSION_CODE")?.toIntOrNull()
-            ?: 101
+            ?: 102
         versionName = (findProperty("versionName") as String?)
             ?: System.getenv("VERSION_NAME")
-            ?: "0.1.1"
+            ?: "0.1.2"
     }
 
     signingConfigs {
@@ -83,6 +83,7 @@ dependencies {
     implementation("top.yukonga.miuix.kmp:miuix-preference:0.9.0")
     implementation("top.yukonga.miuix.kmp:miuix-icons:0.9.0")
 }
+
 
 
 

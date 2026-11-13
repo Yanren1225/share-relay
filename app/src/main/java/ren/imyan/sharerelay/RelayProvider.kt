@@ -13,11 +13,15 @@ import android.webkit.MimeTypeMap
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
+import java.util.ArrayDeque
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * 只读 Provider：
  *  - /shared/<fileName>  复制进本应用的文件
  *  - /root/<token>       Root 直读的原始文件（读取时用 su cat 供数）
+ *  - /fd/<token>         分享时趁授权有效预先打开的真实文件 FD（可 seek、零拷贝）
  */
 class RelayProvider : ContentProvider() {
 
@@ -25,6 +29,7 @@ class RelayProvider : ContentProvider() {
         const val AUTHORITY = "ren.imyan.sharerelay.files"
         private const val SHARED = "shared"
         private const val ROOT = "root"
+        private const val FD = "fd"
 
         fun sharedDir(c: Context): File = File(c.filesDir, SHARED)
 
@@ -36,17 +41,23 @@ class RelayProvider : ContentProvider() {
             .scheme("content").authority(AUTHORITY)
             .appendPath(ROOT).appendPath(token).build()
 
-        /** 清理超过 maxAgeMs 的副本，避免私有目录无限增长。 */
+        fun uriForFd(token: String): Uri = Uri.Builder()
+            .scheme("content").authority(AUTHORITY)
+            .appendPath(FD).appendPath(token).build()
+
+        /** 清理超过 maxAgeMs 的副本，避免私有目录无限增长；顺手清掉过期的 FD。 */
         fun purgeOld(c: Context, maxAgeMs: Long = 24L * 60 * 60 * 1000) {
             val cutoff = System.currentTimeMillis() - maxAgeMs
             sharedDir(c).listFiles()?.forEach { f ->
                 if (f.isFile && f.lastModified() < cutoff) runCatching { f.delete() }
             }
+            FdVfs.purgeOld()
         }
     }
 
     override fun onCreate(): Boolean {
         sharedDir(requireNotNull(context)).mkdirs()
+        FdVfs.purgeOld()
         return true
     }
 
@@ -61,6 +72,9 @@ class RelayProvider : ContentProvider() {
 
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
         val seg = uri.pathSegments
+        if (seg.size == 2 && seg[0] == FD) {
+            return FdVfs.take(seg[1]) ?: throw FileNotFoundException("no fd left")
+        }
         if (seg.size == 2 && seg[0] == ROOT) {
             val entry = RootVfs.entry(seg[1]) ?: throw FileNotFoundException("unknown token")
             return openRootPipe(entry.path)
@@ -96,6 +110,13 @@ class RelayProvider : ContentProvider() {
 
     override fun getType(uri: Uri): String? {
         val seg = uri.pathSegments
+        if (seg.size == 2 && seg[0] == FD) {
+            FdVfs.entry(seg[1])?.let { e ->
+                e.mime?.let { return it }
+                return mimeFromName(e.name)
+            }
+            return "application/octet-stream"
+        }
         if (seg.size == 2 && seg[0] == ROOT) {
             RootVfs.entry(seg[1])?.let { e ->
                 e.mime?.let { return it }
@@ -122,7 +143,9 @@ class RelayProvider : ContentProvider() {
     ): Cursor {
         val cursor = MatrixCursor(arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE))
         val seg = uri.pathSegments
-        if (seg.size == 2 && seg[0] == ROOT) {
+        if (seg.size == 2 && seg[0] == FD) {
+            FdVfs.entry(seg[1])?.let { cursor.addRow(arrayOf<Any>(it.name, it.size)) }
+        } else if (seg.size == 2 && seg[0] == ROOT) {
             RootVfs.entry(seg[1])?.let { cursor.addRow(arrayOf<Any>(it.name, it.size)) }
         } else if (seg.size == 2 && seg[0] == SHARED) {
             runCatching {
@@ -157,5 +180,57 @@ class RelayProvider : ContentProvider() {
     ): Int = throw UnsupportedOperationException("read only")
 }
 
+/**
+ * 预打开的来源文件 FD 池。
+ *
+ * 分享时趁来源授权有效（Activity 还活着），对同一个来源 URI 调多次
+ * ContentResolver.openFileDescriptor()，每次都会得到互不影响的独立文件描述符和偏移，
+ * 目标 App 打开我们的 /fd/<token> 时取一个交给它：
+ *  - 零拷贝：没有把文件复制到磁盘；
+ *  - 可 seek：是来源 Provider 的真实文件 fd，缩略图、视频拖动都正常；
+ *  - 不依赖 Activity 存活：fd 已经打开，即使我们退出，目标仍能读取。
+ *
+ * 同一个 URI 预留多个 fd：分享面板预览可能读一次，目标 App 正式读取一次，
+ * 有的 App 还会二次打开（例如先取元数据再读内容），一次性发完就没有了。
+ */
+object FdVfs {
+    data class Entry(
+        val pfds: ArrayDeque<ParcelFileDescriptor>,
+        val name: String,
+        val size: Long,
+        val mime: String?,
+        val createdAt: Long
+    )
 
+    /** 目标 App 一般很快读完；30 分钟后仍未取走的 fd 直接关掉，避免泄漏。 */
+    private const val MAX_AGE_MS = 30L * 60 * 1000
 
+    private val map = ConcurrentHashMap<String, Entry>()
+
+    fun register(pfds: List<ParcelFileDescriptor>, name: String, size: Long, mime: String?): String {
+        purgeOld()
+        val token = UUID.randomUUID().toString().replace("-", "")
+        map[token] = Entry(ArrayDeque(pfds), name, size, mime, System.currentTimeMillis())
+        return token
+    }
+
+    /** 每次 openFile 取走一个 fd；剩下的留给后续打开。 */
+    fun take(token: String): ParcelFileDescriptor? = map[token]?.pfds?.pollFirst()
+
+    fun entry(token: String): Entry? = map[token]
+
+    fun purgeOld() {
+        val cutoff = System.currentTimeMillis() - MAX_AGE_MS
+        map.entries.forEach { e ->
+            if (e.value.createdAt < cutoff && map.remove(e.key) != null) {
+                e.value.pfds.forEach { runCatching { it.close() } }
+                Log.i("ShareRelay", "fd purge token=${e.key} name=${e.value.name}")
+            }
+        }
+    }
+
+    fun clear() {
+        map.values.forEach { e -> e.pfds.forEach { runCatching { it.close() } } }
+        map.clear()
+    }
+}
